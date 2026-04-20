@@ -48,7 +48,9 @@ const SettingsCtx = createContext<{ cache: SettingsCache; updateCache: (patch: P
 });
 
 const App: React.FC = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(
+    () => (localStorage.getItem('theme') as 'light' | 'dark') || 'light'
+  );
   const [settingsCache, setSettingsCache] = useState<SettingsCache>(defaultCache);
 
   // Load settings once on app startup
@@ -104,7 +106,11 @@ const App: React.FC = () => {
     return () => window.removeEventListener('contextmenu', handleContextMenu);
   }, []);
 
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  const toggleTheme = () => setTheme(prev => {
+    const next = prev === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme', next);
+    return next;
+  });
   const routeFallback = (
     <div className="h-full min-h-[240px] flex items-center justify-center text-sm text-text-secondary">
       正在加载页面...
