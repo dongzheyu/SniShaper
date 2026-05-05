@@ -301,6 +301,21 @@
     },
     "cf_pool": {
       "fetch_now": "更新 IP 池"
+    },
+    "update": {
+      "title": "应用更新",
+      "desc": "检查最新版本并打开浏览器下载",
+      "check": "检查更新",
+      "checking": "检查中...",
+      "button": "打开浏览器下载",
+      "dialog_title": "发现新版本",
+      "dialog_subtitle": "v{version} 现已可用",
+      "skip": "跳过",
+      "toast_opened": "已打开浏览器",
+      "toast_opened_desc": "请在浏览器中下载最新版本",
+      "toast_latest": "当前已是最新版本",
+      "toast_latest_desc": "版本号: {version}",
+      "toast_failed": "检查更新失败"
     }
   }
 }

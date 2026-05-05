@@ -96,3 +96,52 @@ export class SystemProxyStatus {
         return new SystemProxyStatus(/** @type {Partial<SystemProxyStatus>} */($$parsedSource));
     }
 }
+
+export class UpdateInfo {
+    /**
+     * Creates a new UpdateInfo instance.
+     * @param {Partial<UpdateInfo>} [$$source = {}] - The source object to create the UpdateInfo.
+     */
+    constructor($$source = {}) {
+        if (!("latest_version" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["latest_version"] = "";
+        }
+        if (!("download_url" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["download_url"] = "";
+        }
+        if (!("release_notes" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["release_notes"] = "";
+        }
+        if (!("is_dev_version" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["is_dev_version"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {UpdateInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateInfo(/** @type {Partial<UpdateInfo>} */($$parsedSource));
+    }
+}

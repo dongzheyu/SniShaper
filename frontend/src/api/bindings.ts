@@ -94,3 +94,7 @@ export const UpdateDNSNode = (n: any) => appCall('UpdateDNSNode', n);
 export const DeleteDNSNode = (id: string) => appCall('DeleteDNSNode', id);
 export const SetDNSNodePriority = (id: string, targetIndex: number) => appCall('SetDNSNodePriority', id, targetIndex);
 export const TestDNSNode = (nodeID: string) => appCall('TestDNSNode', nodeID);
+
+// Update Management API
+export const CheckUpdate = () => appCall('CheckUpdate');
+export const StartUpdate = () => appCall('StartUpdate');

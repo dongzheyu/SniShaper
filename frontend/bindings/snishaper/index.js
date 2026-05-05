@@ -9,5 +9,6 @@ export {
 
 export {
     CAInstallStatus,
-    SystemProxyStatus
+    SystemProxyStatus,
+    UpdateInfo
 } from "./models.js";

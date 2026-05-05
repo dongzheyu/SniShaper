@@ -50,7 +50,9 @@ import {
   TriggerCFHealthCheck,
   RemoveInvalidCFIPs,
   GetLanguage,
-  SetLanguage
+  SetLanguage,
+  CheckUpdate,
+  StartUpdate
 } from '../api/bindings';
 import { toast } from '../lib/toast';
 import { useTranslation } from '../i18n/I18nContext';
@@ -123,6 +125,11 @@ const Settings: React.FC<SettingsProps> = ({ cache, onCacheUpdate, theme, toggle
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
   const [isCertBusy, setIsCertBusy] = useState(false);
+  
+  // Update management states
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   // Read-only display data
   const tunConfig = cache.tunConfig;
@@ -286,8 +293,106 @@ const Settings: React.FC<SettingsProps> = ({ cache, onCacheUpdate, theme, toggle
     }
   };
 
+  // Update management functions
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const info = await CheckUpdate();
+      setUpdateInfo(info);
+      
+      if (info.is_dev_version) {
+        toast.info(
+          t('settings.update.toast_latest'),
+          t('settings.update.toast_latest_desc', { version: info.latest_version })
+        );
+      } else {
+        // 显示更新对话框
+        setShowUpdateDialog(true);
+      }
+    } catch (err: any) {
+      toast.error(t('settings.update.toast_failed'), String(err));
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const handleStartUpdate = async () => {
+    if (!updateInfo || updateInfo.is_dev_version) {
+      toast.info(t('settings.update.toast_latest'));
+      setShowUpdateDialog(false);
+      return;
+    }
+
+    try {
+      await StartUpdate();
+      toast.success(
+        t('settings.update.toast_opened'),
+        t('settings.update.toast_opened_desc'),
+        {
+          duration: 5000
+        }
+      );
+      setShowUpdateDialog(false);
+    } catch (err: any) {
+      toast.error(t('common.failed'), String(err));
+      setShowUpdateDialog(false);
+    }
+  };
+
+  const handleSkipUpdate = () => {
+    setShowUpdateDialog(false);
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Update Dialog Modal */}
+      {showUpdateDialog && updateInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-background border border-border rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-accent/10 rounded-xl">
+                  <Download size={24} className="text-accent" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold">{t('settings.update.dialog_title')}</h3>
+                  <p className="text-sm text-text-secondary mt-1">
+                    {t('settings.update.dialog_subtitle', { version: updateInfo.latest_version })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Release Notes */}
+              {updateInfo.release_notes && (
+                <div className="bg-background-soft rounded-xl p-4 border border-border">
+                  <p className="text-xs text-text-secondary whitespace-pre-wrap">
+                    {updateInfo.release_notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleSkipUpdate}
+                  className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm font-bold hover:bg-background-hover transition-all"
+                >
+                  {t('settings.update.skip')}
+                </button>
+                <button
+                  onClick={handleStartUpdate}
+                  className="flex-1 px-4 py-2.5 bg-accent text-white rounded-xl text-sm font-bold hover:bg-accent/90 transition-all flex items-center justify-center gap-2"
+                >
+                  <Download size={16} />
+                  {t('settings.update.button')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-black tracking-tighter">{t('settings.title')}</h1>
@@ -374,6 +479,25 @@ const Settings: React.FC<SettingsProps> = ({ cache, onCacheUpdate, theme, toggle
                     {t('settings.appearance.dark')}
                   </button>
                 </div>
+              </SettingItem>
+
+              <SettingItem
+                title={t('settings.update.title')}
+                desc={t('settings.update.desc')}
+                icon={<Download size={20} />}
+              >
+                <button
+                  onClick={handleCheckUpdate}
+                  disabled={isCheckingUpdate}
+                  className="px-4 py-2 bg-accent/10 text-accent rounded-xl text-xs font-bold hover:bg-accent hover:text-white transition-all disabled:opacity-60 flex items-center gap-2"
+                >
+                  {isCheckingUpdate ? (
+                    <RefreshCcw size={14} className="animate-spin" />
+                  ) : (
+                    <Download size={14} />
+                  )}
+                  {isCheckingUpdate ? t('settings.update.checking') : t('settings.update.check')}
+                </button>
               </SettingItem>
             </div>
           </section>

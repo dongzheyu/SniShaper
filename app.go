@@ -13,8 +13,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -47,6 +49,7 @@ type App struct {
 	systemProxyOpMu   sync.Mutex
 	launchedAtStartup bool
 	core              *coreClient
+	tempDir           string // Temporary directory for update.txt
 
 	// Track stats for traffic speed calculations
 	lastIn   int64
@@ -196,6 +199,7 @@ func NewApp() *App {
 		proxyMarkerPath:   filepath.Join(execDir, "config", "system_proxy_owner.json"),
 		launchedAtStartup: hasLaunchArg("--startup"),
 		core:              newCoreClient(),
+		tempDir:           filepath.Join(os.TempDir(), "snishaper-update"), // Temporary directory for update files
 	}
 
 	// Initialize Cloudflare IP pool and trigger background health check on startup
@@ -309,6 +313,9 @@ func (a *App) startupV3() {
 	a.setupFileLogger()
 	log.Printf("[startup] SniShaper startup hook entered")
 	a.appendLog("[startup] in-memory log channel ready")
+
+	// Initialize temp directory for update files
+	a.initTempDir()
 
 	var err error
 	a.certManager, err = cert.InitCertManager(a.certPath)
@@ -689,6 +696,9 @@ func (a *App) shutdown() {
 		}
 	}
 
+	// Clean up temp directory
+	a.cleanupTempDir()
+
 	a.appendLog("[shutdown] SniShaper shutdown complete")
 }
 
@@ -698,6 +708,39 @@ func (a *App) setupFileLogger() {
 	}
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.SetOutput(newBestEffortMultiWriter(&gatedLogWriter{app: a}, os.Stdout))
+}
+
+// initTempDir 初始化临时目录（启动时调用）
+func (a *App) initTempDir() {
+	// 保底操作：先尝试删除旧的temp目录（防止异常退出没有删除）
+	if err := os.RemoveAll(a.tempDir); err != nil {
+		// 如果删除失败，记录日志但继续执行
+		log.Printf("[warn] Failed to remove old temp dir: %v", err)
+	}
+
+	// 创建新的temp目录
+	if err := os.MkdirAll(a.tempDir, 0755); err != nil {
+		log.Printf("[error] Failed to create temp dir: %v", err)
+		a.appendLog(fmt.Sprintf("[error] Failed to create temp directory: %v", err))
+	} else {
+		log.Printf("[info] Temp directory created: %s", a.tempDir)
+		a.appendLog(fmt.Sprintf("[startup] Temp directory initialized: %s", a.tempDir))
+	}
+}
+
+// cleanupTempDir 清理临时目录（关闭时调用）
+func (a *App) cleanupTempDir() {
+	if a.tempDir == "" {
+		return
+	}
+
+	if err := os.RemoveAll(a.tempDir); err != nil {
+		log.Printf("[warn] Failed to cleanup temp dir: %v", err)
+		a.appendLog(fmt.Sprintf("[shutdown] Failed to cleanup temp directory: %v", err))
+	} else {
+		log.Printf("[info] Temp directory cleaned up: %s", a.tempDir)
+		a.appendLog(fmt.Sprintf("[shutdown] Temp directory removed: %s", a.tempDir))
+	}
 }
 
 func (a *App) appendLog(message string) {
@@ -1799,4 +1842,69 @@ func (a *App) WindowToggleMaximise() {
 
 func (a *App) WindowClose() {
 	a.QuitApp()
+}
+
+// Update Management API
+
+// CheckUpdate 检查更新
+func (a *App) CheckUpdate() (*UpdateInfo, error) {
+	a.appendLog("[update] Checking for updates...")
+
+	// 创建更新管理器（使用 GitHub 代理）
+	versionFileURL := "https://github.chenc.dev/https://raw.githubusercontent.com/dongzheyu/SniShaperWeb/master/update.txt"
+	um := NewUpdateManager("", versionFileURL)
+
+	// 检查更新（传入temp目录路径）
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	updateInfo, err := um.CheckForUpdates(ctx, a.tempDir)
+	if err != nil {
+		a.appendLog(fmt.Sprintf("[update] Check failed: %v", err))
+		return nil, fmt.Errorf("检查更新失败：%v", err)
+	}
+
+	if updateInfo.IsDevVersion {
+		a.appendLog(fmt.Sprintf("[update] Current version %s is up to date", GetLocalVersion()))
+	} else {
+		a.appendLog(fmt.Sprintf("[update] New version available: %s", updateInfo.LatestVersion))
+	}
+
+	return updateInfo, nil
+}
+
+// StartUpdate 打开浏览器下载最新版本
+func (a *App) StartUpdate() error {
+	a.appendLog("[update] Opening browser to download latest version...")
+
+	// 首先检查是否有可用更新
+	updateInfo, err := a.CheckUpdate()
+	if err != nil {
+		return fmt.Errorf("检查更新失败：%v", err)
+	}
+
+	if updateInfo.IsDevVersion {
+		return fmt.Errorf("当前已是最新版本，无需更新")
+	}
+
+	// 直接打开浏览器访问下载地址（update.txt 第二行）
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		// 使用rundll32打开URL，这是Windows最可靠的方式
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", updateInfo.DownloadURL)
+	case "darwin":
+		cmd = exec.Command("open", updateInfo.DownloadURL)
+	case "linux":
+		cmd = exec.Command("xdg-open", updateInfo.DownloadURL)
+	default:
+		return fmt.Errorf("不支持的操作系统：%s", runtime.GOOS)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("打开浏览器失败：%v", err)
+	}
+
+	a.appendLog(fmt.Sprintf("[update] Opened browser to: %s", updateInfo.DownloadURL))
+	return nil
 }

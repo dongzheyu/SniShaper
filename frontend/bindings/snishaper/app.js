@@ -559,6 +559,22 @@ export function WindowClose() {
     return $Call.ByName("main.App.WindowClose");
 }
 
+/**
+ * @returns {$CancellablePromise<$models.UpdateInfo>}
+ */
+export function CheckUpdate() {
+    return $Call.ByName("main.App.CheckUpdate").then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType18($result);
+    }));
+}
+
+/**
+ * @returns {$CancellablePromise<void>}
+ */
+export function StartUpdate() {
+    return $Call.ByName("main.App.StartUpdate");
+}
+
 // Private type creation functions
 const $$createType0 = $models.CAInstallStatus.createFrom;
 const $$createType1 = proxy$0.CloudflareConfig.createFrom;
@@ -578,3 +594,4 @@ const $$createType14 = proxy$0.Upstream.createFrom;
 const $$createType15 = $Create.Array($$createType14);
 const $$createType16 = proxy$0.WarpStatus.createFrom;
 const $$createType17 = proxy$0.ImportSummary.createFrom;
+const $$createType18 = $models.UpdateInfo.createFrom;

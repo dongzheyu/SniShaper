@@ -301,6 +301,21 @@
     },
     "cf_pool": {
       "fetch_now": "Refresh IP Pool"
+    },
+    "update": {
+      "title": "App Update",
+      "desc": "Check latest version and open browser to download",
+      "check": "Check for Updates",
+      "checking": "Checking...",
+      "button": "Open Browser to Download",
+      "dialog_title": "New Version Available",
+      "dialog_subtitle": "v{version} is now available",
+      "skip": "Skip",
+      "toast_opened": "Browser opened",
+      "toast_opened_desc": "Please download the latest version in your browser",
+      "toast_latest": "Already up to date",
+      "toast_latest_desc": "Version: {version}",
+      "toast_failed": "Check failed"
     }
   }
 }

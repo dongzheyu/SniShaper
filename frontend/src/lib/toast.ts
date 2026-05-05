@@ -23,12 +23,18 @@ const emitToast = (payload: Omit<ToastPayload, 'id'>) => {
 };
 
 export const toast = {
-  success: (title: string, message?: string, duration?: number) =>
-    emitToast({ type: 'success', title, message, duration }),
-  error: (title: string, message?: string, duration?: number) =>
-    emitToast({ type: 'error', title, message, duration }),
-  info: (title: string, message?: string, duration?: number) =>
-    emitToast({ type: 'info', title, message, duration })
+  success: (title: string, message?: string, options?: number | { duration?: number }) => {
+    const duration = typeof options === 'number' ? options : options?.duration;
+    emitToast({ type: 'success', title, message, duration });
+  },
+  error: (title: string, message?: string, options?: number | { duration?: number }) => {
+    const duration = typeof options === 'number' ? options : options?.duration;
+    emitToast({ type: 'error', title, message, duration });
+  },
+  info: (title: string, message?: string, options?: number | { duration?: number }) => {
+    const duration = typeof options === 'number' ? options : options?.duration;
+    emitToast({ type: 'info', title, message, duration });
+  }
 };
 
 export { TOAST_EVENT };
